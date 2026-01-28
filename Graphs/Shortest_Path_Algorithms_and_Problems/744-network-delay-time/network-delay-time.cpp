@@ -1,31 +1,36 @@
 class Solution {
 public:
     int networkDelayTime(vector<vector<int>>& times, int n, int k) {
-        int m=times.size();
-        vector<vector<pair<int,int>>>adj(n+1);
-        for(int i=0;i<m;i++){
-            adj[times[i][0]].push_back({times[i][1],times[i][2]});
+        vector<vector<pair<int,int>>> adj(n+1);
+        for(auto it: times){
+            adj[it[0]].push_back({it[1],it[2]});
         }
-        priority_queue<pair<int,int>,vector<pair<int,int>>,greater<pair<int,int>>>minHeap;
-        vector<int>minTimeToReach(n+1,INT_MAX);
-        minTimeToReach[k]=0;
-        minHeap.push({0,k});
-        while(!minHeap.empty()){
-            auto [currentTime,currentNode]=minHeap.top();
-            minHeap.pop();
-            for(auto [neighborNode, edgeTime]: adj[currentNode]){
-                int newTime=currentTime+edgeTime;
-                if(newTime<minTimeToReach[neighborNode]){
-                    minTimeToReach[neighborNode]=newTime;
-                    minHeap.push({newTime,neighborNode});
+        priority_queue<pair<int,int>,
+            vector<pair<int,int>>,
+            greater<pair<int,int>>> pq;
+        pq.push({0,k});
+        vector<int> dist(n+1,1e9);
+        dist[k] = 0;
+
+        while(!pq.empty()){
+            auto it = pq.top();
+            pq.pop();
+            int time = it.first;
+            int node = it.second;
+            if(time>dist[node]) continue;
+            
+            for(auto it: adj[node]){
+                int nbr = it.first;
+                int wt = it.second;
+
+                if(time+wt<dist[nbr]){
+                    dist[nbr] = time + wt;
+                    pq.push({time+wt,nbr});
                 }
             }
         }
-        int ans=0;
-        for(int i=1;i<=n;i++){
-            if(minTimeToReach[i]==INT_MAX) return -1;
-            ans=max(ans,minTimeToReach[i]);
-        }
-        return ans;
+
+        int ans = *max_element(dist.begin() + 1,dist.end());
+        return ans == 1e9 ? -1 : ans;
     }
 };
