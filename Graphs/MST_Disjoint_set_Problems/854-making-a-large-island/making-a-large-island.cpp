@@ -1,67 +1,114 @@
 class DisjointSet {
 public:
-    vector<int> parent, size;
+    /* To store the ranks, parents and
+    sizes of different set of vertices */
+    vector<int> rank, parent, size;
+
+    // Constructor
     DisjointSet(int n) {
-        parent.resize(n);
-        size.resize(n, 1);
-        iota(parent.begin(), parent.end(), 0);
+        rank.resize(n + 1, 0);
+        parent.resize(n + 1);
+        size.resize(n + 1);
+        for (int i = 0; i <= n; i++) {
+            parent[i] = i;
+            size[i] = 1;
+        }
     }
-    int find(int i) {
-        if (parent[i] == i) return i;
-        return parent[i] = find(parent[i]);
+
+    // Function to find ultimate parent
+    int findUPar(int node) {
+        if (node == parent[node])
+            return node;
+        return parent[node] = findUPar(parent[node]);
     }
-    void unite(int i, int j) {
-        int rootI = find(i), rootJ = find(j);
-        if (rootI != rootJ) {
-            if (size[rootI] < size[rootJ]) swap(rootI, rootJ);
-            parent[rootJ] = rootI;
-            size[rootI] += size[rootJ];
+
+    // Function to implement union by rank
+    void unionByRank(int u, int v) {
+        int ulp_u = findUPar(u);
+        int ulp_v = findUPar(v);
+        if (ulp_u == ulp_v)
+            return;
+        if (rank[ulp_u] < rank[ulp_v]) {
+            parent[ulp_u] = ulp_v;
+        } else if (rank[ulp_v] < rank[ulp_u]) {
+            parent[ulp_v] = ulp_u;
+        } else {
+            parent[ulp_v] = ulp_u;
+            rank[ulp_u]++;
+        }
+    }
+
+    // Function to implement union by size
+    void unionBySize(int u, int v) {
+        int ulp_u = findUPar(u);
+        int ulp_v = findUPar(v);
+        if (ulp_u == ulp_v)
+            return;
+        if (size[ulp_u] < size[ulp_v]) {
+            parent[ulp_u] = ulp_v;
+            size[ulp_v] += size[ulp_u];
+        } else {
+            parent[ulp_v] = ulp_u;
+            size[ulp_u] += size[ulp_v];
         }
     }
 };
 
 class Solution {
 public:
+    bool isValid(int newr, int newc, int n) {
+        return newr < n && newc < n && newr >= 0 && newc >= 0;
+    }
+
     int largestIsland(vector<vector<int>>& grid) {
         int n = grid.size();
         DisjointSet ds(n * n);
-        int dr[] = {-1, 1, 0, 0}, dc[] = {0, 0, -1, 1};
-
-        for (int r = 0; r < n; ++r) {
-            for (int c = 0; c < n; ++c) {
-                if (grid[r][c] == 1) {
-                    for (int i = 0; i < 4; ++i) {
-                        int nr = r + dr[i], nc = c + dc[i];
-                        if (nr >= 0 && nr < n && nc >= 0 && nc < n && grid[nr][nc] == 1) {
-                            ds.unite(r * n + c, nr * n + nc);
-                        }
+        for (int row = 0; row < n; row++) {
+            for (int col = 0; col < n; col++) {
+                if (grid[row][col] == 0)
+                    continue;
+                int dr[] = {-1, 0, 1, 0};
+                int dc[] = {0, -1, 0, 1};
+                for (int ind = 0; ind < 4; ind++) {
+                    int newr = row + dr[ind];
+                    int newc = col + dc[ind];
+                    if (isValid(newr, newc, n) && grid[newr][newc] == 1) {
+                        int nodeNo = row * n + col;
+                        int adjNodeNo = newr * n + newc;
+                        ds.unionBySize(nodeNo, adjNodeNo);
                     }
                 }
             }
         }
 
-        int ans = 0;
-        for (int i = 0; i < n * n; ++i) ans = max(ans, ds.size[ds.find(i)]);
-
-        for (int r = 0; r < n; ++r) {
-            for (int c = 0; c < n; ++c) {
-                if (grid[r][c] == 0) {
-                    unordered_set<int> seen;
-                    int cur = 1;
-                    for (int i = 0; i < 4; ++i) {
-                        int nr = r + dr[i], nc = c + dc[i];
-                        if (nr >= 0 && nr < n && nc >= 0 && nc < n && grid[nr][nc] == 1) {
-                            int root = ds.find(nr * n + nc);
-                            if (seen.find(root) == seen.end()) {
-                                cur += ds.size[root];
-                                seen.insert(root);
-                            }
+        int mx = 0;
+        for (int row = 0; row < n; row++) {
+            for (int col = 0; col < n; col++) {
+                if (grid[row][col] == 1)
+                    continue;
+                set<int> components;
+                int dr[] = {-1, 0, 1, 0};
+                int dc[] = {0, -1, 0, 1};
+                for (int ind = 0; ind < 4; ind++) {
+                    int newr = row + dr[ind];
+                    int newc = col + dc[ind];
+                    if (isValid(newr, newc, n) && grid[newr][newc] == 1) {
+                        if (grid[newr][newc] == 1) {
+                            components.insert(ds.findUPar(newr * n + newc));
                         }
                     }
-                    ans = max(ans, cur);
                 }
+                int sizeTotal = 0;
+                for (auto it : components) {
+                    sizeTotal += ds.size[it];
+                }
+                mx = max(mx, sizeTotal + 1);
             }
         }
-        return ans;
+
+        for (int cellno = 0; cellno < n * n; cellno++) {
+            mx = max(mx, ds.size[ds.findUPar(cellno)]);
+        }
+        return mx;
     }
 };
